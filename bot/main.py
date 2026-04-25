@@ -3,7 +3,7 @@
 import logging
 from datetime import time as dt_time
 
-from telegram import Update
+from telegram import Update, BotCommand
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, ContextTypes, filters,
 )
@@ -23,6 +23,31 @@ logging.basicConfig(
     level=logging.INFO,
 )
 log = logging.getLogger("oracle")
+
+
+# ============ Telegram command menu ==================================
+# This populates the blue "Menu" button next to the input box in Telegram.
+# Runs once on startup; stays in sync with the code automatically.
+
+BOT_COMMANDS = [
+    BotCommand("done",         "Mark a task complete"),
+    BotCommand("snooze",       "Pause a task until a date"),
+    BotCommand("keep",         "Keep a stale-flagged item alive"),
+    BotCommand("kill",         "Abandon a task"),
+    BotCommand("clearinbox",   "Bulk delete inbox items"),
+    BotCommand("context",      "Add a context item"),
+    BotCommand("listcontext",  "Show active context"),
+    BotCommand("clearcontext", "Remove context items"),
+    BotCommand("energy",       "Set energy level"),
+    BotCommand("review",       "Stale items + cleanup"),
+    BotCommand("setup",        "Initialize sheet schema"),
+    BotCommand("help",         "Show command list"),
+]
+
+
+async def post_init(application: Application) -> None:
+    await application.bot.set_my_commands(BOT_COMMANDS)
+    log.info("Telegram command menu registered (%d commands).", len(BOT_COMMANDS))
 
 
 # ============ Scheduled jobs =========================================
@@ -54,7 +79,12 @@ async def weekly_review_job(context: ContextTypes.DEFAULT_TYPE) -> None:
 # ============ Bootstrap ==============================================
 
 def main() -> None:
-    app = Application.builder().token(CONFIG.TELEGRAM_BOT_TOKEN).build()
+    app = (
+        Application.builder()
+        .token(CONFIG.TELEGRAM_BOT_TOKEN)
+        .post_init(post_init)
+        .build()
+    )
 
     # Slash commands
     app.add_handler(CommandHandler("done",         cmd_done))
@@ -77,9 +107,7 @@ def main() -> None:
     # Scheduled jobs (in-process JobQueue, runs while bot is running)
     jq = app.job_queue
     if jq is not None:
-        # Daily sweep at 02:00 local
         jq.run_daily(daily_sweep_job, time=dt_time(hour=2, minute=0))
-        # Weekly review every Friday at 17:00 local (Mon=0, Fri=4)
         jq.run_daily(weekly_review_job, time=dt_time(hour=17, minute=0), days=(4,))
     else:
         log.warning("JobQueue unavailable. Install `python-telegram-bot[job-queue]` for scheduled tasks.")

@@ -12,7 +12,7 @@ This is **v0.1**. Today it does one thing — re-rank my open tasks on demand ag
 
 I got tired of to-do lists that just grow until I stop looking at them.
 
-What I wanted instead: a thing I can dump every passing thought into, and that will, when I ask, tell me the *one* thing I should be doing right now — given that I want to start a robotics company in 10 years, that I have a project due Monday, that the exam I was dreading just got cancelled, that I'm tired today, and that I keep saying I'll learn time series analysis but somehow never do.
+What I wanted instead: a thing I can dump every passing thought into, and that will, when I ask, tell me the *one* thing I should be doing right now — given my long-term goals, this week's deadlines, the meeting that just got cancelled, the fact that I'm tired today, and the skill I keep saying I'll pick up but somehow never start.
 
 Standard apps treat priorities as static. Mine aren't. So Wazir treats `what's next` as a recomputation against current state, not a lookup against a fixed list. Every ask hits the LLM with my full context and produces a ranked Top 10 with reasoning, plus arrows showing what shifted since last time.
 
@@ -23,30 +23,30 @@ Standard apps treat priorities as static. Mine aren't. So Wazir treats `what's n
 Normal day:
 
 ```
-me   > Read the new robotics book
+me   > Finish the Q2 roadmap draft
 bot  > 📥 Logged. (8 active)
 
-me   > /context exam on Monday cancelled #transient
-bot  > 📌 Added [transient]: exam on Monday cancelled (expires 2026-05-02)
+me   > /context client demo Friday cancelled #transient
+bot  > 📌 Added [transient]: client demo Friday cancelled (expires 2026-05-02)
 
 me   > what's next
 
-bot  > _Today's primary driver: exam pressure removed → deep-work tasks rise._
+bot  > _Today's primary driver: cancelled demo opens deep-work bandwidth._
        
        *Top 5*
-       1. ↑3 *Learn time series analysis*
-          _Prerequisite for ML contests; freed bandwidth from cancelled exam._
-       2. ↑1 *Read robotics book*
-          _Aligns directly with 10-year robotics goal._
-       3. ↓2 *Project for the center due Monday*
-          _Still on deadline but no longer the only thing competing for today._
-       4. NEW *Quran*
-          _Identity-aligned daily practice; promote on freed days._
-       5. = *Speech*
-          _Steady-state; remains relevant but not blocked or urgent._
+       1. ↑3 *Finish Q2 roadmap draft*
+          _Was blocked behind demo prep; now top-priority before next sync._
+       2. ↑1 *Read chapter 3 of the design book*
+          _Long-term skill investment; freed evening capacity._
+       3. ↓2 *Prepare client demo slides*
+          _Was top urgency yesterday; no longer needed this week._
+       4. NEW *Submit conference abstract*
+          _Deadline next Tuesday — surface before it's last-minute._
+       5. = *30-minute walk*
+          _Daily habit; holds steady regardless of context._
        
        🧹 *Possibly stale*:
-       • Hard to kill
+       • Refactor the auth module
        Reply `/keep <keyword>` or `/kill <keyword>`.
 ```
 
@@ -61,11 +61,11 @@ me   > what's next
 bot  > _Low energy — surfacing quick-wins that don't need a full brain._
        
        *Top 3*
-       1. ↑5 *Reply to the center email*
-          _15 min, low-friction; clears one open loop._
+       1. ↑5 *Reply to recruiter email*
+          _15-min task; clears one open loop._
        2. ↑2 *File expense receipts*
           _Mechanical; doesn't compete for focus._
-       3. ↓1 *Learn time series analysis*
+       3. ↓1 *Read chapter 3 of the design book*
           _Demoted: needs deep work, not today's job._
 ```
 
