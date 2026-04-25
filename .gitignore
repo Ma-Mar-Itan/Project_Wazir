@@ -1,0 +1,31 @@
+# --- Secrets / local state (NEVER commit) ---
+**/.env
+**/credentials.json
+**/state.json
+**/*.key
+**/*.pem
+*.log
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
