@@ -1,47 +1,35 @@
 # Wazir
 
-**A personal AI butler. Quiet, competent, always thinking ahead.**
+A task-ranking engine that actually knows what I care about. No SaaS, no notifications, just a direct line to my priorities.
 
-*Wazir* (وزير) is the Arabic word for a high counsel — a vizier, an advisor, the strategist who serves the sultan and runs the day-to-day so the principal can focus on what only they can do. That's the role this project aims at: a JARVIS-class personal assistant, built piece by piece.
+"Wazir" is Arabic for vizier — the advisor who handles the day-to-day so the principal can focus elsewhere. That's roughly what I want this to grow into.
 
-The current organ — what's running today — is **Project Oracle**, the prioritization brain. You feed it your tasks and your life context, and an LLM re-ranks your world on demand. More organs are coming.
-
-This is **v0.1**. The foundation.
+This is **v0.1**. Today it does one thing — re-rank my open tasks on demand against my current life context. Other modules are planned (calendar, daily briefing, email triage), but I'm not shipping them until I've actually used the foundation for a while.
 
 ---
 
-## The long-term vision
+## Why this exists
 
-What JARVIS does for Tony Stark: scheduling, triage, research, comms, monitoring, gentle nudges, ambient awareness. Wazir aims at the same role — minus the holograms — for a single human, running locally.
+I got tired of to-do lists that just grow until I stop looking at them.
 
-The build plan, organ by organ:
+What I wanted instead: a thing I can dump every passing thought into, and that will, when I ask, tell me the *one* thing I should be doing right now — given that I want to start a robotics company in 10 years, that I have a project due Monday, that the exam I was dreading just got cancelled, that I'm tired today, and that I keep saying I'll learn time series analysis but somehow never do.
 
-| Organ            | What it does                                                                       | Status     |
-| ---------------- | ---------------------------------------------------------------------------------- | ---------- |
-| **Oracle**       | Re-ranks your active tasks against context, energy, and decision history           | **Live**   |
-| **Almanac**      | Pulls in calendar + deadlines so ranking respects what's actually scheduled        | Next       |
-| **Herald**       | Morning briefing — what shifted overnight, what's due today, weather/markets       | Soon       |
-| **Scribe**       | Drafts and triages email + messages; never sends without explicit approval         | Soon       |
-| **Cartographer** | Long-term memory and journal; surfaces "you mentioned X two weeks ago, follow up?" | Planned    |
-| **Steward**      | File management — "organize my Downloads," "find the contract from March"          | Planned    |
-| **Watchman**     | Health, sleep, focus signals — intervenes when context demands rest                | Planned    |
-
-Each organ slots into the same architecture: Telegram-fronted, Sheets/JSON-persisted, OpenRouter-backed, local-first, modular.
+Standard apps treat priorities as static. Mine aren't. So Wazir treats `what's next` as a recomputation against current state, not a lookup against a fixed list. Every ask hits the LLM with my full context and produces a ranked Top 10 with reasoning, plus arrows showing what shifted since last time.
 
 ---
 
-## What's running today: Project Oracle
+## What it looks like
 
-Open Telegram, talk to your Wazir:
+Normal day:
 
 ```
-you  > Read the new robotics book
+me   > Read the new robotics book
 bot  > 📥 Logged. (8 active)
 
-you  > /context exam on Monday cancelled #transient
+me   > /context exam on Monday cancelled #transient
 bot  > 📌 Added [transient]: exam on Monday cancelled (expires 2026-05-02)
 
-you  > what's next
+me   > what's next
 
 bot  > _Today's primary driver: exam pressure removed → deep-work tasks rise._
        
@@ -59,37 +47,73 @@ bot  > _Today's primary driver: exam pressure removed → deep-work tasks rise._
        
        🧹 *Possibly stale*:
        • Hard to kill
-       Reply `/keep <keyword>` to keep, `/kill <keyword>` to abandon.
+       Reply `/keep <keyword>` or `/kill <keyword>`.
 ```
 
-The arrows (`↑3`, `↓2`, `NEW`, `=`) show movement since the last run. The italicized line is the LLM's one-sentence summary of what's driving today's ranking. The "stale" callout flags items that have lingered for weeks without ever making the Top 10 — likely things you're avoiding for a reason.
+Tired day:
 
-### What Oracle does
+```
+me   > /energy low
+bot  > 🔋 Energy set to *low* (decays in 12h)
 
-- **Frictionless capture.** Send any text or voice note to the bot — it lands in your Inbox. Voice goes through Whisper.
-- **Natural-language trigger.** Type `what's next`. No slash needed.
-- **Typed context with TTL.** Tag items `#identity`, `#goal`, `#constraint`, or `#transient`. Add `#expires:2026-05-15` or `#expires:friday` and the constraint auto-clears.
-- **Movement diff.** `↑3`, `↓2`, `NEW`, `=` next to each entry — see exactly what shifted.
-- **Energy-aware ranking.** `/energy low|medium|high`. Low → quick-wins (≤30 min). High → deep work and prerequisites that unblock big projects.
-- **Staleness detection.** Items aged past a threshold that never make Top 10 get flagged. Reply `/keep` or `/kill` to resolve in one tap.
-- **Memory across runs.** The LLM sees the last N runs' Top 3 plus what got closed, so a chronically-deferred task gets surfaced rather than buried.
-- **One-shot completion.** `/done 1` or `/done python` from Telegram — no opening Sheets to mark things off.
-- **Snooze.** `/snooze 3 1w` parks an item for a week. `/snooze python friday` until next Friday.
-- **Local, single-binary, single-user.** No webhook, no public URL, no cloud bill.
-- **Daily auto-sweep + Friday weekly review.** Expired transient context gets cleared at 02:00 daily; Friday at 17:00 you get a stale-items review pinged to you.
+me   > what's next
+
+bot  > _Low energy — surfacing quick-wins that don't need a full brain._
+       
+       *Top 3*
+       1. ↑5 *Reply to the center email*
+          _15 min, low-friction; clears one open loop._
+       2. ↑2 *File expense receipts*
+          _Mechanical; doesn't compete for focus._
+       3. ↓1 *Learn time series analysis*
+          _Demoted: needs deep work, not today's job._
+```
+
+Arrows (`↑3`, `↓2`, `NEW`, `=`) show movement since the previous run. The italic line at the top is the LLM's one-sentence summary of what's actually driving today's order. The "stale" callout flags items I've been carrying for weeks that never make Top 10 — usually things I'm avoiding for a reason.
 
 ---
 
-## Design principles
+## What it actually does
 
-These hold across every future organ:
+- **Capture by text or voice.** Send anything to the bot. Voice notes go through Whisper if you've configured it. Lands in the Inbox tab.
+- **Type `what's next`.** Re-rank on demand. No slash, no menu, no clicks.
+- **Tag context with type and expiry.** `#identity`, `#goal`, `#constraint`, or `#transient`. `#expires:2026-05-15` or `#expires:friday`. Transient items auto-clear.
+- **Mark things done from chat.** `/done 1` for the Top 10 index, `/done python` for substring match. No opening Sheets to flip a checkbox.
+- **Snooze.** `/snooze 3 1w` parks task #3 for a week.
+- **Energy-aware.** `/energy low|medium|high` shifts the ranking toward quick-wins or deep work for the next 12 hours.
+- **Stale-item flagging.** Things older than 14 days that have appeared in past Top 10s but never been done get surfaced. Reply `/keep` or `/kill` to resolve.
+- **Memory across runs.** The LLM sees the last 5 runs' Top 3 plus what got closed since, so it can notice patterns ("this keeps ranking high but you keep skipping it").
+- **Quiet by default.** Only sends messages when you message it first. Two exceptions: a daily 02:00 sweep that pings you *only* if it cleared expired context, and a Friday 17:00 stale-items review.
 
-1. **Local-first.** Your data stays on your machine and your Sheet. No SaaS in the loop. No login wall to your own life.
-2. **Telegram as the universal interface.** Typing beats clicking, voice beats typing, and Telegram works on every device with a network. One chat — eventually one bot — fronting every organ.
-3. **Sheets as the persistent body.** Auditable, hand-editable, easy to inspect. Anything Wazir thinks lives in a tab you can open. No black box.
-4. **Provider-agnostic LLM.** OpenRouter, so you can swap models without code changes. Free models work; paid ones cost cents.
-5. **Modular by organ.** Each capability is independently installable. Today's Oracle stays running while tomorrow's Almanac slots in beside it.
-6. **Persistent by default.** Wazir doesn't quietly forget. Tasks, context, history — they stay until you explicitly close them.
+---
+
+## Modules (planned)
+
+The codebase is set up so each capability is a separate module that registers handlers on startup. Adding the next one means dropping a new file in `bot/` and wiring it in `main.py`.
+
+| Module           | Job                                                                                | Status     |
+| ---------------- | ---------------------------------------------------------------------------------- | ---------- |
+| **Oracle**       | Re-ranks open tasks against context, energy, decision history                      | Live       |
+| **Almanac**      | Pulls in Google Calendar so ranking respects what's actually scheduled             | Next       |
+| **Herald**       | Morning briefing — what shifted overnight, what's due, anything I'm tracking       | Soon       |
+| **Scribe**       | Drafts and triages email; never sends without explicit approval                    | Soon       |
+| **Cartographer** | Long-term memory; surfaces "you mentioned X two weeks ago, follow up?"             | Planned    |
+| **Steward**      | File management — "organize my Downloads," "find the contract from March"          | Planned    |
+| **Watchman**     | Sleep / focus signals; intervenes when context says rest                           | Planned    |
+
+I'll only build these as I actually need them. Speculative features rot.
+
+---
+
+## Design choices
+
+A few that hold across every module I add:
+
+1. **Local.** Runs on my PC. No cloud bill, no public URL, no login wall to my own life. Bot polls Telegram; reads/writes my own Google Sheet via a service account.
+2. **Telegram as the universal interface.** Typing > clicking, voice > typing, and Telegram works on every device. One chat fronts everything.
+3. **Sheets as the persistent body.** Auditable, hand-editable, no dashboard to build. Anything Wazir thinks is in a tab I can open and fix manually.
+4. **Provider-agnostic LLM.** Via OpenRouter, so I can swap models without code changes. Free models work; paid ones cost cents per call.
+5. **Persistent by default.** Tasks and context stay until I explicitly close them. Combined with staleness detection, the system can't quietly forget things I've half-committed to.
 
 ---
 
@@ -98,7 +122,7 @@ These hold across every future organ:
 ```
 ┌─────────────────┐   text/voice     ┌──────────────────┐
 │  Telegram bot   │ ───────────────► │  Local Python    │
-│   (Senses)      │                  │  (Organs)        │
+│   (Senses)      │                  │   (Modules)      │
 └─────────────────┘ ◄─── reply ───── └────────┬─────────┘
                                               │
                               gspread ────────┼──── requests
@@ -109,19 +133,36 @@ These hold across every future organ:
                               └─────────────────┘  └─────────────┘
 ```
 
-- **Senses (Telegram):** async capture via long-polling. No public URL.
-- **Body (Google Sheets):** Oracle owns four tabs — `Inbox`, `Context`, `Master Path`, `DecisionLog`. Future organs add their own tabs.
-- **Brain (OpenRouter):** any LLM you point it at. Currently `openai/gpt-oss-120b:free`.
-
-The Python process is the home for all organs. Each one registers handlers (slash commands, scheduled jobs) on startup. Adding a new organ means dropping a new module in `bot/` and wiring it in `main.py`.
+Oracle owns four sheet tabs: `Inbox`, `Context`, `Master Path`, `DecisionLog`. Future modules will add their own.
 
 ---
 
-## Quick start
+## Reality check on setup
 
-You'll need a Telegram account, a Google account, an OpenRouter account, and Python 3.10+.
+This isn't a one-click install. You need:
 
-### 1. Gather credentials
+- A Telegram bot token (from @BotFather)
+- Your Telegram chat ID (one URL fetch, takes 30 seconds)
+- An OpenRouter API key (free tier is fine)
+- A Google Cloud service account with Sheets + Drive APIs enabled, and you need to share your sheet with the service account's email
+- Python 3.10+ on PATH
+- Optionally an OpenAI key if you want voice transcription
+
+When it breaks during setup, it's almost always one of:
+
+- The `.env` file isn't actually named `.env` (Windows likes to add `.txt`)
+- The Sheets/Drive APIs aren't enabled in your Google Cloud project
+- You forgot to share the sheet with the service account email
+- Your OpenRouter balance is $0 and the model you picked isn't free
+- The model slug you picked is deprecated — preview-tier OpenRouter models rotate
+
+Fix any of those and it runs indefinitely. The polling bot will sit in the background using essentially no resources.
+
+---
+
+## Setup
+
+### 1. Credentials
 
 | What                   | Where                                                                   |
 | ---------------------- | ----------------------------------------------------------------------- |
@@ -130,7 +171,7 @@ You'll need a Telegram account, a Google account, an OpenRouter account, and Pyt
 | OpenRouter API key     | [openrouter.ai/keys](https://openrouter.ai/keys)                        |
 | Google service account | [console.cloud.google.com](https://console.cloud.google.com) → enable Sheets + Drive APIs → IAM → Service accounts → Create → Keys → JSON → save as `credentials.json` |
 
-Then **share your Google Sheet with the service account email** (looks like `something@project-name.iam.gserviceaccount.com`) — Editor access.
+Then share your Google Sheet with the service account email (Editor access).
 
 ### 2. Configure
 
@@ -139,10 +180,10 @@ git clone https://github.com/<you>/wazir.git
 cd wazir/bot
 cp .env.example .env
 # edit .env with your values
-# place credentials.json in this folder
+# put credentials.json in this folder
 ```
 
-Minimum `.env`:
+`.env`:
 
 ```ini
 TELEGRAM_BOT_TOKEN=123456:ABC-...
@@ -151,12 +192,12 @@ OPENROUTER_API_KEY=sk-or-v1-...
 GOOGLE_SHEETS_ID=1aBc...    # the long string in your sheet's URL between /d/ and /edit
 GOOGLE_CREDENTIALS_PATH=credentials.json
 OPENROUTER_MODEL=openai/gpt-oss-120b:free
-OPENAI_API_KEY=             # optional, for Whisper voice transcription
+OPENAI_API_KEY=             # optional, only for voice
 ```
 
 ### 3. Run
 
-**Windows:** double-click `bot/run.bat`. First run creates a venv and installs dependencies (~1 min); subsequent runs start instantly.
+**Windows:** double-click `bot/run.bat`. First run builds the venv (~1 min); subsequent runs start instantly.
 
 **macOS / Linux:**
 ```bash
@@ -168,62 +209,48 @@ python main.py
 
 ### 4. Initialize the sheet
 
-In Telegram, send `/setup`. The bot adds any missing columns (`SnoozedUntil`, `TimesRanked`, `Movement`) and creates the `DecisionLog` tab.
+Send `/setup` to the bot. Adds missing columns and creates the `DecisionLog` tab.
 
-### 5. Use it
-
-- Send any text → logged to Inbox
-- Send a voice note → transcribed (if `OPENAI_API_KEY` is set) and logged
-- Type `what's next` → ranked Top 10 with reasoning + diff arrows
-- Send `/help` for the full command list
-
-To keep Wazir running automatically on Windows: `Win+R` → `shell:startup` → drop a shortcut to `run.bat` in there.
+To run on Windows boot: `Win+R` → `shell:startup` → drop a shortcut to `run.bat` in there.
 
 ---
 
-## Commands (Oracle organ)
+## Commands
 
 ### Capture
 | Action              | How                                            |
 | ------------------- | ---------------------------------------------- |
 | Log a thought       | Send any text                                  |
-| Log a voice thought | Send a voice note (requires `OPENAI_API_KEY`)  |
+| Log a voice thought | Send a voice note (needs `OPENAI_API_KEY`)     |
 | Re-rank now         | Type `what's next`                             |
 
 ### Tasks
 | Command                            | Effect                                                       |
 | ---------------------------------- | ------------------------------------------------------------ |
-| `/done <#\|keyword>`               | Mark complete (Top 10 index or substring match)              |
+| `/done <#\|keyword>`               | Mark complete                                                |
 | `/snooze <#\|keyword> <duration>`  | Pause until later (`3d`, `1w`, `friday`, `2026-05-15`)       |
 | `/keep <#\|keyword>`               | Keep stale-flagged item alive                                |
-| `/kill <#\|keyword>`               | Abandon item (different from done)                           |
-| `/clearinbox [done\|killed\|all]`  | Bulk delete; default is `done`                               |
+| `/kill <#\|keyword>`               | Abandon (different from done)                                |
+| `/clearinbox [done\|killed\|all]`  | Bulk delete; default `done`                                  |
 
 ### Context
 | Command                                       | Effect                                                       |
 | --------------------------------------------- | ------------------------------------------------------------ |
-| `/context <text> [#type] [#expires:<date>]`   | Add context. Types: `#identity` `#goal` `#constraint` `#transient` |
-| `/listcontext`                                | Show active context, numbered                                |
-| `/clearcontext <#\|all>`                      | Remove a single item by index, or wipe everything            |
-
-Examples:
-```
-/context I value depth over breadth #identity
-/context Conference deadline May 15 #constraint #expires:2026-05-15
-/context Job interview Tuesday #transient
-```
+| `/context <text> [#type] [#expires:<date>]`   | Add. Types: `#identity` `#goal` `#constraint` `#transient`   |
+| `/listcontext`                                | Show active context                                          |
+| `/clearcontext <#\|all>`                      | Remove single item or wipe                                   |
 
 ### State
-| Command                       | Effect                                                       |
-| ----------------------------- | ------------------------------------------------------------ |
-| `/energy <low\|medium\|high>` | Set energy; weights quick-wins vs. deep work; decays in 12h  |
-| `/review`                     | Stale items + clear expired context                          |
+| Command                       | Effect                                                  |
+| ----------------------------- | ------------------------------------------------------- |
+| `/energy <low\|medium\|high>` | Set energy; weights ranking; decays in 12h              |
+| `/review`                     | Stale items + clear expired context                     |
 
 ### Setup
 | Command  | Effect                                              |
 | -------- | --------------------------------------------------- |
 | `/setup` | Initialize sheet schema + register scheduled jobs   |
-| `/help`  | Print the full command list inside Telegram         |
+| `/help`  | Print the command list inside Telegram              |
 
 ---
 
@@ -252,11 +279,11 @@ Tunables in `bot/config.py`:
 | `Master Path` | Priority, Task, Reasoning, Movement                                      |
 | `DecisionLog` | Run Timestamp, Top 10 Tasks, Energy, Done Since Last Run                 |
 
-- `Inbox.Type` ∈ `task` (default) | `project`. For `project` items, the LLM ranks the **next concrete physical action**, not the project label.
-- `Inbox.Status` ∈ `pending` | `processed` | `done` | `snoozed` | `killed`
-- `Context.Type` ∈ `identity` | `goal` | `constraint` | `transient`
+`Inbox.Type`: `task` (default) or `project`. For `project`, the LLM ranks the next concrete physical action, not the project label itself.
+`Inbox.Status`: `pending` | `processed` | `done` | `snoozed` | `killed`.
+`Context.Type`: `identity` | `goal` | `constraint` | `transient`.
 
-Edit anything directly in Sheets — Wazir reads it on the next run.
+You can edit anything in Sheets directly. Bot picks it up on the next run.
 
 ---
 
@@ -264,66 +291,45 @@ Edit anything directly in Sheets — Wazir reads it on the next run.
 
 ```
 wazir/
-├── README.md                   ← you are here
+├── README.md
 ├── improvements_checklist.md   ← design notes from the audit pass
 ├── pyproject.toml
-└── bot/                        ← Python process — home for all organs
+└── bot/
     ├── README.md               ← detailed setup walkthrough
-    ├── main.py                 ← entry point (polling loop + JobQueue)
+    ├── main.py                 ← entry point (polling + scheduled jobs)
     ├── commands.py             ← Oracle slash commands + text/voice handlers
     ├── llm.py                  ← OpenRouter call + the "what's next" engine
     ├── sheets.py               ← Google Sheets via gspread
     ├── voice.py                ← Whisper transcription
-    ├── config.py               ← loads .env, defines tunables
+    ├── config.py               ← .env loader, tunables
     ├── utils.py                ← date parsing + Markdown helpers
-    ├── state.py                ← local JSON state (energy, last-run timestamp)
+    ├── state.py                ← local JSON state
     ├── requirements.txt
     ├── run.bat                 ← Windows launcher
     └── .env.example
 ```
-
-Future organs will land as new modules in `bot/` and register their handlers in `main.py`.
 
 ---
 
 ## Tech stack
 
 - Python 3.10+
-- [`python-telegram-bot`](https://github.com/python-telegram-bot/python-telegram-bot) (`[job-queue]` extra) — polling + scheduled jobs
-- [`gspread`](https://github.com/burnash/gspread) — Google Sheets via service account
-- [`requests`](https://requests.readthedocs.io/) — OpenRouter and Whisper HTTP
-- [`python-dotenv`](https://github.com/theskumar/python-dotenv) — `.env` loading
+- [`python-telegram-bot`](https://github.com/python-telegram-bot/python-telegram-bot) (`[job-queue]` extra)
+- [`gspread`](https://github.com/burnash/gspread)
+- [`requests`](https://requests.readthedocs.io/)
+- [`python-dotenv`](https://github.com/theskumar/python-dotenv)
 
 LLM is provider-agnostic via OpenRouter:
 
 | Model                                    | Notes                                |
 | ---------------------------------------- | ------------------------------------ |
-| `openai/gpt-oss-120b:free`               | Free, current default                |
-| `meta-llama/llama-3.3-70b-instruct:free` | Free, capable, well-supported        |
-| `google/gemini-2.0-flash-001`            | Paid, ~$0.10/M tokens, very fast     |
-| `anthropic/claude-3.5-haiku`             | Paid, strong at structured output    |
-
----
-
-## Troubleshooting
-
-| Symptom                                    | Likely cause                                                  |
-| ------------------------------------------ | ------------------------------------------------------------- |
-| `Missing required env var`                 | `.env` not picked up — confirm filename is exactly `.env`     |
-| `WorksheetNotFound` on launch              | Sheet not shared with service account email, or wrong sheet ID |
-| `403 / 401` from Google                    | Sheets and Drive APIs not enabled in your Google Cloud project |
-| `Conflict: terminated by other getUpdates` | Bot already running elsewhere, or webhook is set: visit `https://api.telegram.org/bot<TOKEN>/deleteWebhook` |
-| `OpenRouter HTTP 400`                      | Model slug invalid, deprecated, or doesn't support requested features. The error body now surfaces the exact reason |
-| Voice notes do nothing                     | `OPENAI_API_KEY` not set, or no credit                        |
+| `openai/gpt-oss-120b:free`               | Free; current default                |
+| `meta-llama/llama-3.3-70b-instruct:free` | Free; capable; well-supported        |
+| `google/gemini-2.0-flash-001`            | Paid; ~$0.10/M tokens; very fast     |
+| `anthropic/claude-3.5-haiku`             | Paid; strong at structured output    |
 
 ---
 
 ## Status
 
-**v0.1** — Oracle organ live and stable. Foundation laid; subsequent organs slot in without rearchitecture.
-
-Single-user by design. Local-first. The "Persistent Iteration" mode (tasks stay until you explicitly close them) is intentional — combined with staleness detection, it gives you a system that won't quietly forget things you've half-committed to.
-
-> The cost of remembering is offloaded to the system; the cost of *deciding* is offloaded to the LLM; what's left for you is just doing.
-
-Built for myself. Open-sourced because the shape of this tool seems generally useful, and because building Wazir in public makes the next organ easier to pull off.
+v0.1, single-user, runs while my PC is on. Built for myself. Open-sourced because the shape is generally useful and because building in public makes the next module easier to pull off.
