@@ -1,24 +1,26 @@
 # Wazir
 
-A task-ranking engine that actually knows what I care about. No SaaS, no notifications, just a direct line to my priorities.
+A personal AI butler I'm building piece by piece. Like JARVIS, scoped to one person, running on my PC.
 
-"Wazir" is Arabic for vizier — the advisor who handles the day-to-day so the principal can focus elsewhere. That's roughly what I want this to grow into.
+"Wazir" is Arabic for vizier — the advisor who handles the day-to-day so the principal can focus elsewhere. That's the long-term aim: scheduling, email triage, research, gentle nudges, ambient awareness — done locally, in plain text, on my terms.
 
-This is **v0.1**. Today it does one thing — re-rank my open tasks on demand against my current life context. Other modules are planned (calendar, daily briefing, email triage), but I'm not shipping them until I've actually used the foundation for a while.
+**Today, Wazir has exactly one working module: Oracle, a task-ranking engine. That's it.** Everything else on this page is planned, not built.
 
 ---
 
-## Why this exists
+## Oracle: the task-ranking engine
+
+You feed it your open tasks and your life context — long-term goals, current constraints, what's expiring soon — and an LLM re-ranks your active list on demand. Capture happens in Telegram (text or voice). Persistence is your own Google Sheet.
+
+### Why this exists
 
 I got tired of to-do lists that just grow until I stop looking at them.
 
 What I wanted instead: a thing I can dump every passing thought into, and that will, when I ask, tell me the *one* thing I should be doing right now — given my long-term goals, this week's deadlines, the meeting that just got cancelled, the fact that I'm tired today, and the skill I keep saying I'll pick up but somehow never start.
 
-Standard apps treat priorities as static. Mine aren't. So Wazir treats `what's next` as a recomputation against current state, not a lookup against a fixed list. Every ask hits the LLM with my full context and produces a ranked Top 10 with reasoning, plus arrows showing what shifted since last time.
+Standard apps treat priorities as static. Mine aren't. So Oracle treats `what's next` as a recomputation against current state, not a lookup against a fixed list. Every ask hits the LLM with my full context and produces a ranked Top 10 with reasoning, plus arrows showing what shifted since last time.
 
----
-
-## What it looks like
+### What it looks like
 
 Normal day:
 
@@ -71,9 +73,7 @@ bot  > _Low energy — surfacing quick-wins that don't need a full brain._
 
 Arrows (`↑3`, `↓2`, `NEW`, `=`) show movement since the previous run. The italic line at the top is the LLM's one-sentence summary of what's actually driving today's order. The "stale" callout flags items I've been carrying for weeks that never make Top 10 — usually things I'm avoiding for a reason.
 
----
-
-## What it actually does
+### What Oracle does
 
 - **Capture by text or voice.** Send anything to the bot. Voice notes go through Whisper if you've configured it. Lands in the Inbox tab.
 - **Type `what's next`.** Re-rank on demand. No slash, no menu, no clicks.
@@ -87,9 +87,9 @@ Arrows (`↑3`, `↓2`, `NEW`, `=`) show movement since the previous run. The it
 
 ---
 
-## Modules (planned)
+## Roadmap
 
-The codebase is set up so each capability is a separate module that registers handlers on startup. Adding the next one means dropping a new file in `bot/` and wiring it in `main.py`.
+Wazir's other modules — what I plan to add next, and what's much further out:
 
 | Module           | Job                                                                                | Status     |
 | ---------------- | ---------------------------------------------------------------------------------- | ---------- |
@@ -101,13 +101,15 @@ The codebase is set up so each capability is a separate module that registers ha
 | **Steward**      | File management — "organize my Downloads," "find the contract from March"          | Planned    |
 | **Watchman**     | Sleep / focus signals; intervenes when context says rest                           | Planned    |
 
+The codebase is set up so each module registers its own handlers on startup. Adding a new one means dropping a file in `bot/` and wiring it into `main.py` — no rearchitecture.
+
 I'll only build these as I actually need them. Speculative features rot.
 
 ---
 
 ## Design choices
 
-A few that hold across every module I add:
+A few that hold across every module Wazir grows into:
 
 1. **Local.** Runs on my PC. No cloud bill, no public URL, no login wall to my own life. Bot polls Telegram; reads/writes my own Google Sheet via a service account.
 2. **Telegram as the universal interface.** Typing > clicking, voice > typing, and Telegram works on every device. One chat fronts everything.
@@ -133,7 +135,7 @@ A few that hold across every module I add:
                               └─────────────────┘  └─────────────┘
 ```
 
-Oracle owns four sheet tabs: `Inbox`, `Context`, `Master Path`, `DecisionLog`. Future modules will add their own.
+Oracle currently owns four sheet tabs: `Inbox`, `Context`, `Master Path`, `DecisionLog`. Future modules will add their own.
 
 ---
 
@@ -156,7 +158,7 @@ When it breaks during setup, it's almost always one of:
 - Your OpenRouter balance is $0 and the model you picked isn't free
 - The model slug you picked is deprecated — preview-tier OpenRouter models rotate
 
-Fix any of those and it runs indefinitely. The polling bot will sit in the background using essentially no resources.
+Fix any of those and it runs indefinitely. The polling bot sits in the background using essentially no resources.
 
 ---
 
@@ -215,7 +217,7 @@ To run on Windows boot: `Win+R` → `shell:startup` → drop a shortcut to `run.
 
 ---
 
-## Commands
+## Commands (Oracle)
 
 ### Capture
 | Action              | How                                            |
@@ -332,4 +334,4 @@ LLM is provider-agnostic via OpenRouter:
 
 ## Status
 
-v0.1, single-user, runs while my PC is on. Built for myself. Open-sourced because the shape is generally useful and because building in public makes the next module easier to pull off.
+Wazir is an aspiration. **Oracle is the first module — live, stable, in daily use.** Single-user by design, runs while my PC is on. Built for myself, open-sourced because the shape is generally useful and because building in public makes the next module easier to pull off.
